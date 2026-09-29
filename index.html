@@ -1,0 +1,2260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FP&A Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --navy:   #1B2A4A;
+    --navy2:  #243558;
+    --green:  #2ECC71;
+    --red:    #E74C3C;
+    --gold:   #F39C12;
+    --blue:   #3498DB;
+    --purple: #9B59B6;
+    --teal:   #1ABC9C;
+    --bg:     #F0F3FA;
+    --card:   #FFFFFF;
+    --border: #DDE3F0;
+    --text:   #1B2A4A;
+    --muted:  #7F8C8D;
+    --sidebar-w: 200px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; font-size: 13px; }
+
+  /* ─── SIDEBAR ─── */
+  #sidebar {
+    width: var(--sidebar-w); min-width: var(--sidebar-w);
+    background: var(--navy); color: #fff;
+    display: flex; flex-direction: column;
+    overflow-y: auto; overflow-x: hidden;
+    transition: width .3s;
+    z-index: 100;
+  }
+  .logo-area { padding: 18px 16px 12px; border-bottom: 1px solid rgba(255,255,255,.12); }
+  .logo-area .logo-icon { font-size: 28px; color: var(--green); }
+  .logo-area .logo-img  { max-width: 100%; max-height: 88px; display: block; margin: 0 auto; object-fit: contain; }
+  .logo-area .logo-title { font-size: 15px; font-weight: 700; letter-spacing: 1px; }
+  .logo-area .logo-sub   { font-size: 10px; color: rgba(255,255,255,.5); letter-spacing: 2px; }
+  .nav-section { padding: 12px 0; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 18px; cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: all .2s; font-size: 13px; color: rgba(255,255,255,.75);
+  }
+  .nav-item:hover  { background: rgba(255,255,255,.08); color: #fff; border-left-color: var(--green); }
+  .nav-item.active { background: rgba(46,204,113,.15); color: #fff; border-left-color: var(--green); font-weight: 600; }
+  .nav-item .icon  { font-size: 16px; width: 20px; text-align: center; }
+  .filters-section { padding: 14px 14px; border-top: 1px solid rgba(255,255,255,.1); margin-top: auto; }
+  .filters-section h4 { font-size: 10px; letter-spacing: 1.5px; color: rgba(255,255,255,.4); margin-bottom: 10px; }
+  .filter-group { margin-bottom: 10px; }
+  .filter-label { font-size: 11px; color: rgba(255,255,255,.5); margin-bottom: 4px; }
+  .filter-select {
+    width: 100%; padding: 6px 8px; border-radius: 6px;
+    border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.08);
+    color: #fff; font-size: 12px; cursor: pointer; outline: none;
+  }
+  .filter-select option { background: var(--navy2); color: #fff; }
+
+  /* ─── MAIN ─── */
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  #header {
+    background: #fff; padding: 14px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .header-title h1 { font-size: 22px; font-weight: 700; color: var(--navy); }
+  .header-title p  { font-size: 12px; color: var(--muted); }
+  .demo-flag {
+    display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 10px;
+    background: rgba(243,156,18,.12); border: 1px solid rgba(243,156,18,.4);
+    color: #B9770E; font-size: 9px; font-weight: 700; letter-spacing: .6px;
+  }
+  .header-right    { display: flex; align-items: center; gap: 14px; }
+  .last-update     { font-size: 11px; color: var(--muted); text-align: right; }
+  .btn-export {
+    background: var(--navy); color: #fff; border: none; padding: 8px 16px;
+    border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600;
+    display: flex; align-items: center; gap: 6px; transition: background .2s;
+  }
+  .btn-export:hover { background: var(--navy2); }
+
+  /* ─── CONTENT ─── */
+  #content { flex: 1; overflow-y: auto; padding: 18px 20px; }
+
+  /* ─── PAGES ─── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ─── KPI CARDS ─── */
+  .kpi-row { display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; margin-bottom: 18px; }
+  .kpi-card {
+    background: #fff; border-radius: 12px; padding: 16px 16px 14px;
+    border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05); transition: box-shadow .2s;
+  }
+  .kpi-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,.1); }
+  .kpi-label { font-size: 10px; font-weight: 700; letter-spacing: .8px; color: var(--muted); margin-bottom: 6px; }
+  .kpi-value { font-size: 22px; font-weight: 700; color: var(--navy); line-height: 1; margin-bottom: 8px; }
+  .kpi-delta { font-size: 11px; }
+  .kpi-delta .pos  { color: var(--green); font-weight: 600; }
+  .kpi-delta .neg  { color: var(--red);   font-weight: 600; }
+  .kpi-icon {
+    width: 42px; height: 42px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+  }
+
+  /* ─── CHARTS GRID ─── */
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .charts-row2 { display: grid; grid-template-columns: 1fr 1fr 1.1fr; gap: 14px; margin-bottom: 14px; }
+  .card {
+    background: #fff; border-radius: 12px; padding: 18px;
+    border: 1px solid var(--border); box-shadow: 0 1px 4px rgba(0,0,0,.05);
+  }
+  .card-title { font-size: 11px; font-weight: 700; letter-spacing: .6px; color: var(--navy); margin-bottom: 4px; }
+  .card-sub   { font-size: 10px; color: var(--muted); margin-bottom: 14px; }
+  .chart-wrap { position: relative; height: 240px; }
+
+  /* ─── LEGEND ─── */
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+  .legend-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-line { width: 20px; height: 2px; flex-shrink: 0; }
+
+  /* ─── MARGINS TABLE ─── */
+  .margins-row { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 14px; margin-bottom: 14px; }
+
+  /* ─── TOP 5 ─── */
+  .top5-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+  .top5-col-title { font-size: 11px; font-weight: 700; margin-bottom: 8px; }
+  .top5-col-title.pos { color: var(--green); }
+  .top5-col-title.neg { color: var(--red); }
+  .top5-item { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 11px; }
+  .top5-item:last-child { border-bottom: none; }
+  .top5-val { font-weight: 700; }
+  .top5-val.pos { color: var(--green); }
+  .top5-val.neg { color: var(--red); }
+
+  /* ─── CWC INDICATORS ─── */
+  .cwc-row { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; margin-bottom: 14px; }
+  .cwc-card {
+    background: #fff; border-radius: 10px; padding: 14px;
+    border: 1px solid var(--border); text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+  }
+  .cwc-label { font-size: 10px; font-weight: 700; letter-spacing: .6px; color: var(--muted); margin-bottom: 6px; }
+  .cwc-value { font-size: 20px; font-weight: 700; color: var(--navy); }
+  .cwc-delta { font-size: 11px; margin-top: 4px; }
+
+  /* ─── TABLE ─── */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .data-table th { background: var(--navy); color: #fff; padding: 8px 10px; text-align: center; font-size: 11px; }
+  .data-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); text-align: center; }
+  .data-table tr:nth-child(even) td { background: #F8FAFF; }
+  .data-table tr:hover td { background: #EEF3FF; }
+  .data-table td:first-child { text-align: left; font-weight: 600; }
+  .pos-cell { color: var(--green); font-weight: 700; }
+  .neg-cell { color: var(--red);   font-weight: 700; }
+
+  /* ─── DONUT CENTER ─── */
+  .donut-wrap { position: relative; }
+  .donut-center {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    text-align: center; pointer-events: none;
+  }
+  .donut-center .val { font-size: 15px; font-weight: 700; color: var(--navy); }
+  .donut-center .sub { font-size: 10px; color: var(--muted); }
+
+  /* ─── FORECAST TABLE ─── */
+  .forecast-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+
+  /* ─── SCROLLBAR ─── */
+  #content::-webkit-scrollbar { width: 6px; }
+  #content::-webkit-scrollbar-track { background: transparent; }
+  #content::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
+  /* ─── TOAST ─── */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--navy);
+    color: #fff; padding: 12px 22px; border-radius: 10px; font-size: 13px;
+    transform: translateY(60px); opacity: 0; transition: all .3s; z-index: 9999;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+
+  @media (max-width: 1200px) {
+    .kpi-row { grid-template-columns: repeat(3,1fr); }
+    .charts-row { grid-template-columns: 1fr; }
+    .charts-row2 { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<aside id="sidebar">
+  <div class="logo-area">
+    <img id="company-logo" class="logo-img" alt="Logo da empresa" style="display:none">
+    <div id="logo-icon-fallback" class="logo-icon"></div>
+  </div>
+
+  <nav class="nav-section">
+    <div class="nav-item active" data-page="visao" onclick="navigate(this,'visao')">
+      Visão Geral
+    </div>
+    <div class="nav-item" data-page="receita" onclick="navigate(this,'receita')">
+      Receita
+    </div>
+    <div class="nav-item" data-page="custos" onclick="navigate(this,'custos')">
+      Custos & Rentabilidade
+    </div>
+    <div class="nav-item" data-page="caixa" onclick="navigate(this,'caixa')">
+      Caixa & Capital de Giro
+    </div>
+    <div class="nav-item" data-page="forecast" onclick="navigate(this,'forecast')">
+      Planejamento & Forecast
+    </div>
+    <div class="nav-item" data-page="balanco" onclick="navigate(this,'balanco')">
+      Balanço Patrimonial
+    </div>
+    <div class="nav-item" data-page="detalhe" onclick="navigate(this,'detalhe')">
+      Detalhamento
+    </div>
+    <!-- Aba "Configurações" (importar Excel, upload de logo, trocar cor)
+         foi removida por completo do arquivo: este é um protótipo
+         demonstrativo somente leitura, sem nenhuma forma de alterar dados. -->
+  </nav>
+
+  <!-- Seção de filtros removida: Ano, Mês, Região, Unidade de Negócio e Produto eram apenas
+       demonstrativos (applyFilters() só exibia um toast, sem reconectar aos dados). Reative
+       quando os filtros estiverem de fato ligados ao modelo de dados. -->
+</aside>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<div id="main">
+  <header id="header">
+    <div id="header-info">
+      <div class="header-title">
+        <h1 id="page-title">VISÃO GERAL EXECUTIVA</h1>
+        <p id="page-sub">Performance financeira consolidada</p>
+        <span class="demo-flag">DEMONSTRAÇÃO — DADOS ILUSTRATIVOS</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="last-update">Última atualização:<br><strong id="update-time">—</strong></div>
+    </div>
+  </header>
+
+  <div id="content">
+
+    <!-- ══════ PAGE: VISÃO GERAL ══════ -->
+    <div class="page active" id="page-visao">
+
+      <!-- KPI CARDS -->
+      <div class="kpi-row" id="kpi-row"></div>
+
+      <!-- Charts row 1 -->
+      <div class="charts-row">
+        <div class="card">
+          <div class="card-title">EVOLUÇÃO DE RECEITA E EBITDA <span style="color:var(--muted);font-weight:400">(R$ Mi)</span></div>
+          <div class="legend" style="margin-bottom:8px">
+            <div class="legend-item"><div class="legend-line" style="background:var(--navy)"></div> Receita Real</div>
+            <div class="legend-item"><div class="legend-line" style="background:var(--navy);border-top:2px dashed var(--navy)"></div> Receita Budget</div>
+            <div class="legend-item"><div class="legend-line" style="background:var(--green)"></div> EBITDA Real</div>
+            <div class="legend-item"><div class="legend-line" style="background:var(--green);border-top:2px dashed var(--green)"></div> EBITDA Budget</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-evolucao"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">RECEITA: REAL vs BUDGET <span style="color:var(--muted);font-weight:400">(R$ Mi)</span></div>
+          <div class="legend" style="margin-bottom:8px">
+            <div class="legend-item"><div class="legend-dot" style="background:var(--navy)"></div> Real</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#82A0D4"></div> Budget</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Var.%</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-rvb"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Charts row 2 -->
+      <div class="charts-row2">
+        <div class="card">
+          <div class="card-title">MARGENS <span style="color:var(--muted);font-weight:400">(%)</span></div>
+          <div class="legend" style="margin-bottom:8px">
+            <div class="legend-item"><div class="legend-line" style="background:var(--navy)"></div> Margem Bruta</div>
+            <div class="legend-item"><div class="legend-line" style="background:var(--green)"></div> EBITDA</div>
+            <div class="legend-item"><div class="legend-line" style="background:var(--gold)"></div> Líquida</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-margens"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">ESTRUTURA DE CUSTOS <span style="color:var(--muted);font-weight:400">(R$ Mi) — YTD</span></div>
+          <div class="donut-wrap" style="height:180px;display:flex;align-items:center;justify-content:center;position:relative">
+            <canvas id="chart-custos" style="max-height:180px;max-width:180px"></canvas>
+            <div class="donut-center">
+              <div class="val" id="donut-total">R$ 132,4 Mi</div>
+              <div class="sub">Total</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">TOP 5 VARIAÇÕES vs BUDGET <span style="color:var(--muted);font-weight:400">(R$ Mi)</span></div>
+          <div class="top5-grid">
+            <div>
+              <div class="top5-col-title pos">MAIORES POSITIVAS</div>
+              <div id="top5-pos"></div>
+            </div>
+            <div>
+              <div class="top5-col-title neg">MAIORES NEGATIVAS</div>
+              <div id="top5-neg"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CWC Row -->
+      <div class="cwc-row" id="cwc-row"></div>
+
+    </div><!-- /visao -->
+
+    <!-- ══════ PAGE: RECEITA ══════ -->
+    <div class="page" id="page-receita">
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">RECEITA MENSAL POR PRODUTO / CANAL (R$ Mi)</div>
+        <div class="chart-wrap"><canvas id="chart-receita-detalhe"></canvas></div>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">RECEITA ACUMULADA YTD — REAL vs BUDGET (R$ Mi)</div>
+        <div class="chart-wrap"><canvas id="chart-ytd"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">TABELA DETALHADA DE RECEITA (R$ Mi)</div>
+        <div style="overflow-x:auto;margin-top:12px">
+          <table class="data-table" id="tbl-receita"></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ PAGE: CUSTOS ══════ -->
+    <div class="page" id="page-custos">
+      <div class="charts-row" style="margin-bottom:14px">
+        <div class="card">
+          <div class="card-title">ESTRUTURA DE CUSTOS MENSAIS (R$ Mi)</div>
+          <div class="chart-wrap"><canvas id="chart-custos-mensal"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">MARGENS DETALHADAS (%)</div>
+          <div class="chart-wrap"><canvas id="chart-margens2"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">TABELA DE CUSTOS POR CATEGORIA (R$ Mi)</div>
+        <div style="overflow-x:auto;margin-top:12px">
+          <table class="data-table" id="tbl-custos"></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ PAGE: CAIXA ══════ -->
+    <div class="page" id="page-caixa">
+      <div class="charts-row" style="margin-bottom:14px">
+        <div class="card">
+          <div class="card-title">EVOLUÇÃO DO CAIXA (R$ Mi)</div>
+          <div class="chart-wrap"><canvas id="chart-caixa"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">CICLO DE CONVERSÃO DE CAIXA — DIAS</div>
+          <div class="chart-wrap"><canvas id="chart-ccc"></canvas></div>
+        </div>
+      </div>
+      <div class="cwc-row" id="cwc-row2"></div>
+      <div class="card">
+        <div class="card-title">TABELA CAPITAL DE GIRO</div>
+        <div style="overflow-x:auto;margin-top:12px">
+          <table class="data-table" id="tbl-caixa"></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ PAGE: PLANEJAMENTO & FORECAST (CONSOLIDADO DA EMPRESA) ══════ -->
+    <div class="page" id="page-forecast">
+
+      <div class="kpi-row" id="forecast-kpi-row" style="grid-template-columns:repeat(6,1fr);margin-bottom:14px"></div>
+
+      <div class="charts-row" style="margin-bottom:14px">
+        <div class="card">
+          <div class="card-title">RECEITA: BUDGET x FORECAST x REAL (R$ Mi)</div>
+          <div class="chart-wrap"><canvas id="chart-forecast-rec"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">CUSTOS/DESPESAS: BUDGET x FORECAST x REAL (R$ Mi)</div>
+          <div class="chart-wrap"><canvas id="chart-forecast-custos"></canvas></div>
+        </div>
+      </div>
+
+      <div class="charts-row" style="margin-bottom:14px">
+        <div class="card">
+          <div class="card-title">EBITDA: BUDGET x FORECAST x REAL (R$ Mi)</div>
+          <div class="chart-wrap"><canvas id="chart-forecast-ebt"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">MARGEM EBITDA (%)</div>
+          <div class="chart-wrap"><canvas id="chart-forecast-margem"></canvas></div>
+        </div>
+      </div>
+
+      <div class="charts-row" style="margin-bottom:14px">
+        <div class="card">
+          <div class="card-title">LUCRO LÍQUIDO: BUDGET x FORECAST x REAL (R$ Mi)</div>
+          <div class="chart-wrap"><canvas id="chart-forecast-lucro"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">FLUXO DE CAIXA PROJETADO E SALDO DE CAIXA (R$ Mi)</div>
+          <div class="chart-wrap"><canvas id="chart-forecast-caixa"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">CENÁRIOS — BASE x CONSERVADOR x OTIMISTA (TOTAL ANO, R$ Mi)</div>
+        <div class="card-sub">Comparativo de Receita, EBITDA e Lucro Líquido projetados para o ano</div>
+        <div class="chart-wrap"><canvas id="chart-forecast-cenarios"></canvas></div>
+        <div style="overflow-x:auto;margin-top:14px">
+          <table class="data-table" id="tbl-forecast-cenarios"></table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">TABELA CONSOLIDADA — BUDGET x FORECAST x REAL x VARIAÇÃO</div>
+        <div class="card-sub">Totais do ano, empresa como um todo (R$ Mi, exceto %)</div>
+        <div style="overflow-x:auto;margin-top:12px">
+          <table class="data-table" id="tbl-forecast"></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: BALANÇO PATRIMONIAL -->
+    <div class="page" id="page-balanco">
+
+      <!-- 4 KPI cards -->
+      <div class="kpi-row" id="bp-kpi-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px"></div>
+
+      <!-- Ativo + Passivo/PL tables side by side — YTD only -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+        <div class="card">
+          <div class="card-title" style="margin-bottom:4px">ATIVO <span style="color:var(--muted);font-weight:400;font-size:10px">— Posição YTD (R$ Mi)</span></div>
+          <div class="card-sub">Valores acumulados no ano</div>
+          <table class="data-table" id="tbl-ativo"></table>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:4px">PASSIVO + PATRIMÔNIO LÍQUIDO <span style="color:var(--muted);font-weight:400;font-size:10px">— YTD (R$ Mi)</span></div>
+          <div class="card-sub">Valores acumulados no ano</div>
+          <table class="data-table" id="tbl-passivo"></table>
+        </div>
+      </div>
+
+      <!-- Conferência: Ativo = Passivo+PL -->
+      <div id="bp-check-bar" style="margin-bottom:14px;padding:10px 16px;border-radius:10px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:10px"></div>
+
+      <!-- Indicadores financeiros YTD — tabela + gráficos -->
+      <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:14px;margin-bottom:14px">
+        <div class="card">
+          <div class="card-title" style="margin-bottom:12px">INDICADORES FINANCEIROS — YTD</div>
+          <table class="data-table" id="tbl-ind-bp"></table>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="card" style="flex:1">
+            <div class="card-title">COMPOSIÇÃO DO ATIVO — YTD</div>
+            <div class="donut-wrap" style="height:140px;display:flex;align-items:center;justify-content:center">
+              <canvas id="chart-ativo-donut" style="max-height:140px;max-width:140px"></canvas>
+              <div class="donut-center"><div class="val" id="ativo-donut-val">—</div><div class="sub">Total Ativo</div></div>
+            </div>
+            <div class="legend" id="legend-ativo-donut" style="justify-content:center;margin-top:8px;margin-bottom:0"></div>
+          </div>
+          <div class="card" style="flex:1">
+            <div class="card-title">COMPOSIÇÃO PASSIVO + PL — YTD</div>
+            <div class="donut-wrap" style="height:140px;display:flex;align-items:center;justify-content:center">
+              <canvas id="chart-passivo-donut" style="max-height:140px;max-width:140px"></canvas>
+              <div class="donut-center"><div class="val" id="passivo-donut-val">—</div><div class="sub">Total P+PL</div></div>
+            </div>
+            <div class="legend" id="legend-passivo-donut" style="justify-content:center;margin-top:8px;margin-bottom:0"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gráficos de análise -->
+      <div class="charts-row" style="margin-bottom:14px">
+        <div class="card">
+          <div class="card-title">LIQUIDEZ — COMPARATIVO YTD vs REFERÊNCIA</div>
+          <div class="chart-wrap"><canvas id="chart-liquidez"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">ESTRUTURA DE CAPITAL — YTD (R$ Mi)</div>
+          <div class="chart-wrap"><canvas id="chart-alavancagem"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">RENTABILIDADE — ROE vs ROA — YTD</div>
+        <div class="chart-wrap"><canvas id="chart-rent"></canvas></div>
+      </div>
+
+    </div>
+
+    <!-- ══════ PAGE: DETALHAMENTO ══════ -->
+    <div class="page" id="page-detalhe">
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">TOP VARIAÇÕES vs BUDGET — DETALHAMENTO COMPLETO (R$ Mi)</div>
+        <div style="overflow-x:auto;margin-top:12px">
+          <table class="data-table" id="tbl-var"></table>
+        </div>
+      </div>
+      <div class="charts-row" style="margin-bottom:14px">
+        <div class="card">
+          <div class="card-title">WATERFALL — BRIDGE EBITDA (R$ Mi)</div>
+          <div class="chart-wrap"><canvas id="chart-waterfall"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">COMPOSIÇÃO RECEITA POR PRODUTO</div>
+          <div class="chart-wrap"><canvas id="chart-pizza-rec"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// LOGO DA EMPRESA
+// ══════════════════════════════════════════════════════════
+// Para embutir o logo PERMANENTEMENTE no arquivo (funciona em qualquer
+// computador/navegador, sem depender de nenhum outro arquivo):
+// 1) Converta sua imagem para Base64 (ex.: https://www.base64-image.de/
+//    ou peça para o Claude fazer isso enviando o arquivo do logo).
+// 2) Cole o resultado abaixo, substituindo a string vazia.
+//    Formato: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...'
+const LOGO_BASE64 = 'data:image/png;base64,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v3ah3nKTEM7lOfTJkjRFX28f+tzeOPT29iCpVIy11EGglQDeLJeiObU1ta8MHlr36tVXXPHmkUceoYn+rnSxA7lftrmDjQHA7oceOqSvvesXld7eMUuXLK3AUgkwFCorwBhA8DC66KkHAc5dHeB6TsWSioPBeKrQgqDBmUQwvQA4QMrXJwLg5HI+Yv5ScatUgFAIpeA88tOgmnHBiBExME7k+xDutzHZxWbJgvu7vDHK/RyQ/1kRrNEAnCDRmmCUKAHOwJkBmC6UioYB3NdVVnDOwZ2zgPtBYIIJDkZEFgYcxMEMAGIcHG6whsiQsQAJKcFgjeBCSxnZKI4047yijV4f87i9vr60IeJ2yejRo9fMmDGjXQiuiu5g/ohCBNviADaQa7bM4ZZ7tq0gme33/t/9hvTvcpX/MJOhd/sdRdKhv8vvv/tTsP/kL/efPBT98++jv3t+G33u3f2+HPls2T9uK1bBNoAOEQObxoCW/+vXiP7F5/8RogbaNfBun3dxVIHe3R2reqqneqqneqqneqqneqqneqqneqqneqqneqqneqqneqqneqqneqqneqqneqqneqqneqqneqqneqqneqqneqqneqqneqqneqqneqqneqqneqqneqqneqpngJ//B4CcR3m5s1ArAAAAAElFTkSuQmCC';
+
+function applyLogo(dataUrl) {
+  const img = document.getElementById('company-logo');
+  const fallback = document.getElementById('logo-icon-fallback');
+  if (!dataUrl) return;
+  img.src = dataUrl;
+  img.style.display = 'block';
+  fallback.style.display = 'none';
+}
+
+// ══════════════════════════════════════════════════════════
+// DATA MODEL
+// ══════════════════════════════════════════════════════════
+const MESES = ['Jan/26','Fev/26','Mar/26','Abr/26','Mai/26','Jun/26',
+               'Jul/26','Ago/26','Set/26','Out/26','Nov/26','Dez/26'];
+const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+let DATA = {
+  "kpis": [
+    {
+      "label": "RECEITA TOTAL",
+      "value": "R$ 28,1 Mi",
+      "icon": "💵",
+      "iconBg": "#EAF5FF",
+      "d1": {
+        "pos": true,
+        "val": "3,5%",
+        "lbl": "vs Budget"
+      },
+      "d2": {
+        "pos": true,
+        "val": "12,5%",
+        "lbl": "vs Ano Ant."
+      }
+    },
+    {
+      "label": "EBITDA",
+      "value": "R$ 5,7 Mi",
+      "icon": "📈",
+      "iconBg": "#EAFAF1",
+      "d1": {
+        "pos": true,
+        "val": "10,8%",
+        "lbl": "vs Budget"
+      },
+      "d2": {
+        "pos": true,
+        "val": "18,0%",
+        "lbl": "vs Ano Ant."
+      }
+    },
+    {
+      "label": "MARGEM EBITDA",
+      "value": "20,5%",
+      "icon": "%",
+      "iconBg": "#FDF5E6",
+      "d1": {
+        "pos": true,
+        "val": "7,1%",
+        "lbl": "vs Budget"
+      },
+      "d2": {
+        "pos": true,
+        "val": "2,1 p.p.",
+        "lbl": "vs Ano Ant."
+      }
+    },
+    {
+      "label": "LUCRO LÍQUIDO",
+      "value": "R$ 3,5 Mi",
+      "icon": "🏆",
+      "iconBg": "#F9EBEA",
+      "d1": {
+        "pos": true,
+        "val": "15,9%",
+        "lbl": "vs Budget"
+      },
+      "d2": {
+        "pos": true,
+        "val": "9,4%",
+        "lbl": "vs Ano Ant."
+      }
+    },
+    {
+      "label": "CAIXA E EQUIV.",
+      "value": "R$ 6,0 Mi",
+      "icon": "💳",
+      "iconBg": "#EAFAF1",
+      "d1": {
+        "pos": true,
+        "val": "5,3%",
+        "lbl": "vs Budget"
+      },
+      "d2": {
+        "pos": true,
+        "val": "22,0%",
+        "lbl": "vs Ano Ant."
+      }
+    }
+  ],
+  "receita_real": [
+    2.1,
+    2.05,
+    2.2,
+    2.15,
+    2.3,
+    2.25,
+    2.4,
+    2.35,
+    2.5,
+    2.45,
+    2.6,
+    2.7
+  ],
+  "receita_budget": [
+    2,
+    2,
+    2.1,
+    2.1,
+    2.2,
+    2.2,
+    2.3,
+    2.3,
+    2.4,
+    2.4,
+    2.5,
+    2.6
+  ],
+  "ebitda_real": [
+    0.42,
+    0.4,
+    0.45,
+    0.43,
+    0.47,
+    0.45,
+    0.49,
+    0.48,
+    0.52,
+    0.5,
+    0.55,
+    0.58
+  ],
+  "ebitda_budget": [
+    0.38,
+    0.38,
+    0.4,
+    0.4,
+    0.42,
+    0.42,
+    0.44,
+    0.44,
+    0.46,
+    0.46,
+    0.48,
+    0.5
+  ],
+  "margem_bruta": [
+    55.00000000000001,
+    54,
+    56.00000000000001,
+    55.00000000000001,
+    56.00000000000001,
+    55.00000000000001,
+    56.99999999999999,
+    56.00000000000001,
+    56.99999999999999,
+    56.00000000000001,
+    57.99999999999999,
+    57.99999999999999
+  ],
+  "margem_ebitda": [
+    20,
+    19,
+    20,
+    20,
+    20,
+    20,
+    20,
+    20,
+    21,
+    20,
+    21,
+    21
+  ],
+  "margem_liquida": [
+    12,
+    12,
+    12,
+    12,
+    13,
+    12,
+    13,
+    13,
+    13,
+    13,
+    14.000000000000002,
+    14.000000000000002
+  ],
+  "custos_ytd": {
+    "cogs": 14.5,
+    "opex": 6.7,
+    "outras": 1.12
+  },
+  "receita_forecast": [
+    2.1,
+    2.05,
+    2.2,
+    2.15,
+    2.3,
+    2.25,
+    2.42,
+    2.38,
+    2.55,
+    2.5,
+    2.65,
+    2.75
+  ],
+  "ebitda_forecast": [
+    0.42,
+    0.4,
+    0.45,
+    0.43,
+    0.47,
+    0.45,
+    0.5,
+    0.49,
+    0.53,
+    0.51,
+    0.56,
+    0.59
+  ],
+  "custos_real": [
+    1.6700000000000002,
+    1.6500000000000001,
+    1.75,
+    1.73,
+    1.82,
+    1.8,
+    1.9200000000000002,
+    1.87,
+    1.9800000000000002,
+    1.9500000000000002,
+    2.0500000000000003,
+    2.13
+  ],
+  "custos_budget": [
+    1.62,
+    1.62,
+    1.7,
+    1.7,
+    1.78,
+    1.78,
+    1.86,
+    1.86,
+    1.94,
+    1.94,
+    2.02,
+    2.1
+  ],
+  "custos_forecast": [
+    1.68,
+    1.65,
+    1.75,
+    1.72,
+    1.83,
+    1.8,
+    1.92,
+    1.89,
+    2.02,
+    1.99,
+    2.09,
+    2.16
+  ],
+  "lucro_liquido_real": [
+    0.25,
+    0.24,
+    0.27,
+    0.26,
+    0.29,
+    0.27,
+    0.3,
+    0.29,
+    0.32,
+    0.3,
+    0.34,
+    0.36
+  ],
+  "lucro_liquido_budget": [
+    0.22,
+    0.22,
+    0.23,
+    0.23,
+    0.24,
+    0.24,
+    0.26,
+    0.26,
+    0.27,
+    0.27,
+    0.28,
+    0.29
+  ],
+  "lucro_liquido_forecast": [
+    0.25,
+    0.24,
+    0.27,
+    0.26,
+    0.29,
+    0.27,
+    0.31,
+    0.3,
+    0.33,
+    0.31,
+    0.35,
+    0.37
+  ],
+  "fluxo_caixa_forecast": [
+    0.3,
+    0.29,
+    0.32,
+    0.31,
+    0.34,
+    0.32,
+    0.36,
+    0.35,
+    0.38,
+    0.36,
+    0.4,
+    0.42
+  ],
+  "cenarios": {
+    "base": {
+      "receita": [
+        2.1,
+        2.05,
+        2.2,
+        2.15,
+        2.3,
+        2.25,
+        2.42,
+        2.38,
+        2.55,
+        2.5,
+        2.65,
+        2.75
+      ],
+      "ebitda": [
+        0.42,
+        0.4,
+        0.45,
+        0.43,
+        0.47,
+        0.45,
+        0.5,
+        0.49,
+        0.53,
+        0.51,
+        0.56,
+        0.59
+      ],
+      "lucro_liquido": [
+        0.25,
+        0.24,
+        0.27,
+        0.26,
+        0.29,
+        0.27,
+        0.31,
+        0.3,
+        0.33,
+        0.31,
+        0.35,
+        0.37
+      ]
+    },
+    "conservador": {
+      "receita": [
+        1.89,
+        1.84,
+        1.98,
+        1.94,
+        2.07,
+        2.02,
+        2.18,
+        2.14,
+        2.29,
+        2.25,
+        2.38,
+        2.48
+      ],
+      "ebitda": [
+        0.38,
+        0.36,
+        0.41,
+        0.39,
+        0.42,
+        0.41,
+        0.45,
+        0.44,
+        0.48,
+        0.46,
+        0.5,
+        0.53
+      ],
+      "lucro_liquido": [
+        0.23,
+        0.22,
+        0.24,
+        0.23,
+        0.26,
+        0.24,
+        0.28,
+        0.27,
+        0.3,
+        0.28,
+        0.32,
+        0.33
+      ]
+    },
+    "otimista": {
+      "receita": [
+        2.35,
+        2.3,
+        2.46,
+        2.41,
+        2.58,
+        2.52,
+        2.71,
+        2.67,
+        2.86,
+        2.8,
+        2.97,
+        3.08
+      ],
+      "ebitda": [
+        0.47,
+        0.45,
+        0.5,
+        0.48,
+        0.53,
+        0.5,
+        0.56,
+        0.55,
+        0.59,
+        0.57,
+        0.63,
+        0.66
+      ],
+      "lucro_liquido": [
+        0.28,
+        0.27,
+        0.3,
+        0.29,
+        0.32,
+        0.3,
+        0.35,
+        0.34,
+        0.37,
+        0.35,
+        0.39,
+        0.41
+      ]
+    }
+  },
+  "balanco": {
+    "ativo_circ": {
+      "Caixa e Equivalentes": {
+        "val": 5.95,
+        "bud": 5.65,
+        "cod": "1.1.01"
+      },
+      "Contas a Receber (líq.)": {
+        "val": 3.2,
+        "bud": 3.3000000000000003,
+        "cod": "1.1.02"
+      },
+      "Estoques": {
+        "val": 1.1,
+        "bud": 1.05,
+        "cod": "1.1.03"
+      },
+      "Imp. a Recuperar": {
+        "val": 0.4,
+        "bud": 0.4,
+        "cod": "1.1.04"
+      },
+      "Outros Ativos Circ.": {
+        "val": 0.3,
+        "bud": 0.3,
+        "cod": "1.1.09"
+      }
+    },
+    "ativo_nc": {
+      "Imobilizado (líq.)": {
+        "val": 4.5,
+        "bud": 4.55,
+        "cod": "1.2.01"
+      },
+      "Intangível": {
+        "val": 0.8,
+        "bud": 0.8,
+        "cod": "1.2.02"
+      },
+      "Investimentos": {
+        "val": 0.2,
+        "bud": 0.2,
+        "cod": "1.2.03"
+      },
+      "Outros Ativos NC": {
+        "val": 0.15,
+        "bud": 0.15,
+        "cod": "1.2.09"
+      }
+    },
+    "pass_circ": {
+      "Contas a Pagar": {
+        "val": 1.6,
+        "bud": 1.6800000000000002,
+        "cod": "2.1.01"
+      },
+      "Empréstimos CP": {
+        "val": 0.9,
+        "bud": 0.9,
+        "cod": "2.1.02"
+      },
+      "Salários e Enc.": {
+        "val": 0.7,
+        "bud": 0.6799999999999999,
+        "cod": "2.1.03"
+      },
+      "Imp. a Recolher": {
+        "val": 0.5,
+        "bud": 0.5,
+        "cod": "2.1.04"
+      },
+      "Outros Pass. CP": {
+        "val": 0.2,
+        "bud": 0.2,
+        "cod": "2.1.09"
+      }
+    },
+    "pass_nc": {
+      "Empréstimos LP": {
+        "val": 2.3,
+        "bud": 2.3,
+        "cod": "2.2.01"
+      },
+      "Debêntures": {
+        "val": 1,
+        "bud": 1,
+        "cod": "2.2.02"
+      },
+      "Outros Pass. NC": {
+        "val": 0.15,
+        "bud": 0.15,
+        "cod": "2.2.09"
+      }
+    },
+    "pl": {
+      "Capital Social": {
+        "val": 8,
+        "bud": 8,
+        "cod": "2.3.01"
+      },
+      "Reservas de Capital": {
+        "val": 0.5,
+        "bud": 0.5,
+        "cod": "2.3.02"
+      },
+      "Lucros Acumulados": {
+        "val": 0.85,
+        "bud": 0.5,
+        "cod": "2.3.03"
+      },
+      "(-) Ações em Tesouraria": {
+        "val": -0.1,
+        "bud": -0.1,
+        "cod": "2.3.04"
+      }
+    },
+    "ebitda": 5.74,
+    "lucro_liq": 3.49,
+    "receita": 28.05
+  },
+  "top5_pos": [
+    {
+      "name": "Receita - Produto A",
+      "val": "R$ 0,3 Mi"
+    },
+    {
+      "name": "EBITDA",
+      "val": "R$ 0,1 Mi"
+    },
+    {
+      "name": "Capital de Giro",
+      "val": "R$ 0,2 Mi"
+    }
+  ],
+  "top5_neg": [
+    {
+      "name": "Custos - Matéria-Prima",
+      "val": "-R$ 0,2 Mi"
+    },
+    {
+      "name": "OPEX - Comercial",
+      "val": "-R$ 0,1 Mi"
+    }
+  ],
+  "cwc": [
+    {
+      "label": "DSO (Dias)",
+      "val": "40",
+      "delta": "-6 dias vs Jan",
+      "pos": true
+    },
+    {
+      "label": "DIO (Dias)",
+      "val": "27",
+      "delta": "-4 dias vs Jan",
+      "pos": true
+    },
+    {
+      "label": "DPO (Dias)",
+      "val": "40",
+      "delta": "+6 dias vs Jan",
+      "pos": true
+    },
+    {
+      "label": "CCC (Dias)",
+      "val": "27",
+      "delta": "-16 dias vs Jan",
+      "pos": true
+    },
+    {
+      "label": "WORKING CAPITAL",
+      "val": "R$ 2,7 Mi",
+      "delta": "+1,1% vs Budget",
+      "pos": true
+    }
+  ],
+  "receita_produtos": {
+    "Produto A": [
+      2.1,
+      2.05,
+      2.2,
+      2.15,
+      2.3,
+      2.25,
+      2.4,
+      2.35,
+      2.5,
+      2.45,
+      2.6,
+      2.7
+    ]
+  },
+  "custos_mensal": {
+    "COGS - Matéria-Prima": [
+      0.67,
+      0.66,
+      0.7,
+      0.69,
+      0.73,
+      0.72,
+      0.76,
+      0.75,
+      0.79,
+      0.78,
+      0.82,
+      0.85
+    ],
+    "COGS - Mão de Obra Direta": [
+      0.42,
+      0.41,
+      0.44,
+      0.43,
+      0.46,
+      0.45,
+      0.48,
+      0.47,
+      0.49,
+      0.49,
+      0.51,
+      0.53
+    ],
+    "OPEX - Comercial": [
+      0.25,
+      0.25,
+      0.26,
+      0.26,
+      0.27,
+      0.27,
+      0.29,
+      0.28,
+      0.3,
+      0.29,
+      0.31,
+      0.32
+    ],
+    "OPEX - Administrativo": [
+      0.25,
+      0.25,
+      0.26,
+      0.26,
+      0.27,
+      0.27,
+      0.29,
+      0.28,
+      0.3,
+      0.29,
+      0.31,
+      0.32
+    ],
+    "Outras Despesas": [
+      0.08,
+      0.08,
+      0.09,
+      0.09,
+      0.09,
+      0.09,
+      0.1,
+      0.09,
+      0.1,
+      0.1,
+      0.1,
+      0.11
+    ]
+  },
+  "caixa": [
+    3,
+    3.3,
+    3.55,
+    3.8,
+    4.05,
+    4.3,
+    4.55,
+    4.85,
+    5.1,
+    5.35,
+    5.65,
+    5.95
+  ],
+  "dso": [
+    46,
+    45,
+    45,
+    44,
+    44,
+    43,
+    43,
+    42,
+    42,
+    41,
+    41,
+    40
+  ],
+  "dio": [
+    31,
+    31,
+    30,
+    30,
+    30,
+    29,
+    29,
+    29,
+    28,
+    28,
+    28,
+    27
+  ],
+  "dpo": [
+    34,
+    35,
+    35,
+    36,
+    36,
+    37,
+    37,
+    38,
+    38,
+    39,
+    39,
+    40
+  ],
+  "variacoes": [
+    {
+      "item": "Receita - Produto A",
+      "tipo": "Receita",
+      "var": 0.35,
+      "dir": "Favorável",
+      "coment": "Aumento de vendas no período"
+    },
+    {
+      "item": "Custos - Matéria-Prima",
+      "tipo": "Custo",
+      "var": -0.18,
+      "dir": "Desfavorável",
+      "coment": "Alta no preço de insumos"
+    },
+    {
+      "item": "OPEX - Comercial",
+      "tipo": "Custo",
+      "var": -0.08,
+      "dir": "Desfavorável",
+      "coment": "Reforço da equipe comercial"
+    },
+    {
+      "item": "EBITDA",
+      "tipo": "Rentabilidade",
+      "var": 0.12,
+      "dir": "Favorável",
+      "coment": "Ganho de eficiência operacional"
+    },
+    {
+      "item": "Capital de Giro",
+      "tipo": "Caixa",
+      "var": 0.2,
+      "dir": "Favorável",
+      "coment": "Redução do prazo médio de recebimento"
+    }
+  ]
+};
+
+// Chart instances registry
+const charts = {};
+
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+// ══════════════════════════════════════════════════════════
+// RENDER FUNCTIONS
+// ══════════════════════════════════════════════════════════
+
+function renderKPIs() {
+  const row = document.getElementById('kpi-row');
+  if (!row) return;
+  row.innerHTML = DATA.kpis.map(k => `
+    <div class="kpi-card">
+      <div>
+        <div class="kpi-label">${k.label}</div>
+        <div class="kpi-value">${k.value}</div>
+        <div class="kpi-delta">
+          <span class="${k.d1.pos?'pos':'neg'}">▲${!k.d1.pos?'▼':''} ${k.d1.val}</span> ${k.d1.lbl}<br>
+          <span class="${k.d2.pos?'pos':'neg'}">${k.d2.pos?'▲':'▼'} ${k.d2.val}</span> ${k.d2.lbl}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderCWC(id) {
+  const row = document.getElementById(id);
+  if (!row) return;
+  row.innerHTML = DATA.cwc.map(c => `
+    <div class="cwc-card">
+      <div class="cwc-label">${c.label}</div>
+      <div class="cwc-value">${c.val}</div>
+      <div class="cwc-delta" style="color:${c.pos?'var(--green)':'var(--red)'}">${c.delta}</div>
+    </div>
+  `).join('');
+}
+
+function renderTop5() {
+  document.getElementById('top5-pos').innerHTML = DATA.top5_pos.map(i =>
+    `<div class="top5-item"><span>${i.name}</span><span class="top5-val pos">${i.val}</span></div>`
+  ).join('');
+  document.getElementById('top5-neg').innerHTML = DATA.top5_neg.map(i =>
+    `<div class="top5-item"><span>${i.name}</span><span class="top5-val neg">${i.val}</span></div>`
+  ).join('');
+}
+
+function initVisaoCharts() {
+  // EVOLUÇÃO
+  destroyChart('chart-evolucao');
+  const ce = document.getElementById('chart-evolucao');
+  if(ce) {
+    charts['chart-evolucao'] = new Chart(ce, {
+      type: 'line',
+      data: {
+        labels: MESES_SHORT,
+        datasets: [
+          { label:'Receita Real',   data: DATA.receita_real,   borderColor:'#1B2A4A', borderWidth:2.5, tension:.4, pointRadius:3, fill:false },
+          { label:'Receita Budget', data: DATA.receita_budget, borderColor:'#1B2A4A', borderDash:[6,3], borderWidth:1.5, tension:.4, pointRadius:0, fill:false },
+          { label:'EBITDA Real',    data: DATA.ebitda_real,    borderColor:'#2ECC71', borderWidth:2.5, tension:.4, pointRadius:3, fill:false },
+          { label:'EBITDA Budget',  data: DATA.ebitda_budget,  borderColor:'#2ECC71', borderDash:[6,3], borderWidth:1.5, tension:.4, pointRadius:0, fill:false },
+        ]
+      },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+        scales:{ x:{grid:{display:false},ticks:{font:{size:10}}}, y:{grid:{color:'#EEE'},ticks:{font:{size:10},callback:v=>v+' Mi'}} } }
+    });
+  }
+
+  // RvB
+  destroyChart('chart-rvb');
+  const crvb = document.getElementById('chart-rvb');
+  const varPct = DATA.receita_real.slice(0,5).map((r,i)=>parseFloat(((r-DATA.receita_budget[i])/DATA.receita_budget[i]*100).toFixed(1)));
+  if(crvb) {
+    charts['chart-rvb'] = new Chart(crvb, {
+      type:'bar',
+      data:{
+        labels: MESES_SHORT.slice(0,5),
+        datasets:[
+          { label:'Real',   data:DATA.receita_real.slice(0,5),   backgroundColor:'#1B2A4A', borderRadius:4 },
+          { label:'Budget', data:DATA.receita_budget.slice(0,5), backgroundColor:'#82A0D4', borderRadius:4 },
+          { label:'Var %',  data:varPct, type:'line', borderColor:'#2ECC71', borderWidth:2, pointRadius:4, yAxisID:'y1', tension:.3 },
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:10}}},
+          y:{grid:{color:'#EEE'},ticks:{font:{size:10},callback:v=>v+' Mi'}},
+          y1:{position:'right',grid:{display:false},ticks:{font:{size:10},callback:v=>v+'%'}}
+        }
+      }
+    });
+  }
+
+  // MARGENS
+  destroyChart('chart-margens');
+  const cm = document.getElementById('chart-margens');
+  if(cm) {
+    charts['chart-margens'] = new Chart(cm, {
+      type:'line',
+      data:{
+        labels: MESES_SHORT,
+        datasets:[
+          { label:'Bruta',  data:DATA.margem_bruta,   borderColor:'#1B2A4A', borderWidth:2.5, tension:.4, pointRadius:3 },
+          { label:'EBITDA', data:DATA.margem_ebitda,  borderColor:'#2ECC71', borderWidth:2.5, tension:.4, pointRadius:3 },
+          { label:'Líquida',data:DATA.margem_liquida, borderColor:'#F39C12', borderWidth:2.5, tension:.4, pointRadius:3 },
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+        scales:{ x:{grid:{display:false},ticks:{font:{size:10}}},
+          y:{grid:{color:'#EEE'},ticks:{font:{size:10},callback:v=>v+'%'},min:0,max:50} }
+      }
+    });
+  }
+
+  // DONUT CUSTOS
+  destroyChart('chart-custos');
+  const cd = document.getElementById('chart-custos');
+  if(cd) {
+    const {cogs,opex,outras} = DATA.custos_ytd;
+    charts['chart-custos'] = new Chart(cd, {
+      type:'doughnut',
+      data:{
+        labels:['COGS','OPEX','Outras Despesas'],
+        datasets:[{ data:[cogs,opex,outras], backgroundColor:['#1B2A4A','#2ECC71','#BDC3C7'], borderWidth:0 }]
+      },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'65%', plugins:{legend:{display:false}} }
+    });
+    const total = (cogs+opex+outras).toFixed(1).replace('.',',');
+    document.getElementById('donut-total').textContent = `R$ ${total} Mi`;
+  }
+}
+
+// ── RECEITA PAGE ──
+function initReceitaCharts() {
+  destroyChart('chart-receita-detalhe');
+  const c = document.getElementById('chart-receita-detalhe');
+  const colors = ['#1B2A4A','#2ECC71','#3498DB','#F39C12'];
+  if(c) {
+    charts['chart-receita-detalhe'] = new Chart(c, {
+      type:'bar',
+      data:{
+        labels: MESES_SHORT,
+        datasets: Object.entries(DATA.receita_produtos).map(([k,v],i)=>({
+          label:k, data:v, backgroundColor:colors[i], borderRadius:3, stack:'s'
+        }))
+      },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{font:{size:11}}}},
+        scales:{ x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}},
+          y:{stacked:true,grid:{color:'#EEE'},ticks:{callback:v=>v+' Mi',font:{size:10}}} }
+      }
+    });
+  }
+
+  destroyChart('chart-ytd');
+  const cy = document.getElementById('chart-ytd');
+  if(cy) {
+    const ytdReal = DATA.receita_real.map((_,i)=>DATA.receita_real.slice(0,i+1).reduce((a,b)=>a+b,0));
+    const ytdBudg = DATA.receita_budget.map((_,i)=>DATA.receita_budget.slice(0,i+1).reduce((a,b)=>a+b,0));
+    charts['chart-ytd'] = new Chart(cy,{
+      type:'line',
+      data:{ labels:MESES_SHORT,
+        datasets:[
+          { label:'Real YTD', data:ytdReal, borderColor:'#1B2A4A', borderWidth:2.5, fill:true, backgroundColor:'rgba(27,42,74,.08)', tension:.3 },
+          { label:'Budget YTD', data:ytdBudg, borderColor:'#82A0D4', borderDash:[5,3], borderWidth:2, fill:false, tension:.3 },
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{font:{size:11}}}},
+        scales:{ x:{grid:{display:false},ticks:{font:{size:10}}}, y:{grid:{color:'#EEE'},ticks:{callback:v=>v+' Mi',font:{size:10}}} }
+      }
+    });
+  }
+
+  // Table
+  const t = document.getElementById('tbl-receita');
+  if(t) {
+    const heads = ['Produto/Canal',...MESES_SHORT,'TOTAL'];
+    t.innerHTML = `<thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>${Object.entries(DATA.receita_produtos).map(([name,vals])=>{
+      const tot = vals.reduce((a,b)=>a+b,0).toFixed(1);
+      return `<tr><td>${name}</td>${vals.map(v=>`<td>${v.toFixed(1)}</td>`).join('')}<td style="font-weight:700">${tot}</td></tr>`;
+    }).join('')}</tbody>`;
+  }
+}
+
+// ── CUSTOS PAGE ──
+function initCustosCharts() {
+  destroyChart('chart-custos-mensal');
+  const c = document.getElementById('chart-custos-mensal');
+  const colors = ['#1B2A4A','#2C3E50','#2ECC71','#3498DB','#BDC3C7'];
+  if(c) {
+    charts['chart-custos-mensal'] = new Chart(c,{
+      type:'bar',
+      data:{ labels:MESES_SHORT,
+        datasets: Object.entries(DATA.custos_mensal).map(([k,v],i)=>({
+          label:k, data:v, backgroundColor:colors[i], borderRadius:3, stack:'s'
+        }))
+      },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{font:{size:10}}}},
+        scales:{ x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}},
+          y:{stacked:true,grid:{color:'#EEE'},ticks:{callback:v=>v+' Mi',font:{size:10}}} }
+      }
+    });
+  }
+
+  destroyChart('chart-margens2');
+  const c2 = document.getElementById('chart-margens2');
+  if(c2) {
+    charts['chart-margens2'] = new Chart(c2,{
+      type:'line',
+      data:{ labels:MESES_SHORT,
+        datasets:[
+          { label:'Margem Bruta',  data:DATA.margem_bruta,   borderColor:'#1B2A4A', borderWidth:2.5, tension:.4, pointRadius:3 },
+          { label:'Margem EBITDA', data:DATA.margem_ebitda,  borderColor:'#2ECC71', borderWidth:2.5, tension:.4, pointRadius:3 },
+          { label:'Margem Líquida',data:DATA.margem_liquida, borderColor:'#F39C12', borderWidth:2.5, tension:.4, pointRadius:3 },
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{font:{size:10}}}},
+        scales:{ x:{grid:{display:false},ticks:{font:{size:10}}},
+          y:{grid:{color:'#EEE'},ticks:{callback:v=>v+'%',font:{size:10}}} }
+      }
+    });
+  }
+
+  const t = document.getElementById('tbl-custos');
+  if(t){
+    const heads = ['Categoria',...MESES_SHORT,'YTD'];
+    t.innerHTML = `<thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>${Object.entries(DATA.custos_mensal).map(([name,vals])=>{
+      const tot = vals.reduce((a,b)=>a+b,0).toFixed(1);
+      return `<tr><td>${name}</td>${vals.map(v=>`<td>${v.toFixed(1)}</td>`).join('')}<td style="font-weight:700">${tot}</td></tr>`;
+    }).join('')}</tbody>`;
+  }
+}
+
+// ── CAIXA PAGE ──
+function initCaixaCharts() {
+  renderCWC('cwc-row2');
+
+  destroyChart('chart-caixa');
+  const c = document.getElementById('chart-caixa');
+  if(c) {
+    charts['chart-caixa'] = new Chart(c,{
+      type:'line',
+      data:{ labels:MESES_SHORT,
+        datasets:[{ label:'Caixa e Equiv.', data:DATA.caixa, borderColor:'#2ECC71', borderWidth:2.5, fill:true, backgroundColor:'rgba(46,204,113,.1)', tension:.4, pointRadius:3 }]
+      },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{ x:{grid:{display:false},ticks:{font:{size:10}}}, y:{grid:{color:'#EEE'},ticks:{callback:v=>'R$'+v+' Mi',font:{size:10}}} }
+      }
+    });
+  }
+
+  destroyChart('chart-ccc');
+  const c2 = document.getElementById('chart-ccc');
+  if(c2) {
+    const ccc = DATA.dso.map((d,i)=>d+DATA.dio[i]-DATA.dpo[i]);
+    charts['chart-ccc'] = new Chart(c2,{
+      type:'bar',
+      data:{ labels:MESES_SHORT,
+        datasets:[
+          { label:'DSO', data:DATA.dso, backgroundColor:'#1B2A4A', borderRadius:3, stack:'s' },
+          { label:'DIO', data:DATA.dio, backgroundColor:'#3498DB', borderRadius:3, stack:'s' },
+          { label:'DPO', data:DATA.dpo.map(v=>-v), backgroundColor:'#E74C3C', borderRadius:3 },
+          { label:'CCC', data:ccc, type:'line', borderColor:'#F39C12', borderWidth:2, pointRadius:3 },
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{font:{size:10}}}},
+        scales:{ x:{grid:{display:false},ticks:{font:{size:10}}}, y:{grid:{color:'#EEE'},ticks:{font:{size:10},callback:v=>v+' d'}} }
+      }
+    });
+  }
+
+  const t = document.getElementById('tbl-caixa');
+  if(t){
+    const ccc = DATA.dso.map((d,i)=>d+DATA.dio[i]-DATA.dpo[i]);
+    const rows = [
+      ['DSO (Dias)', DATA.dso], ['DIO (Dias)', DATA.dio], ['DPO (Dias)', DATA.dpo],
+      ['CCC (Dias)', ccc], ['Caixa (R$ Mi)', DATA.caixa],
+    ];
+    t.innerHTML = `<thead><tr><th>Indicador</th>${MESES_SHORT.map(m=>`<th>${m}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(([n,v])=>`<tr><td>${n}</td>${v.map(x=>`<td>${typeof x==='number'?x.toFixed(x>10?0:1):x}</td>`).join('')}</tr>`).join('')}</tbody>`;
+  }
+}
+
+
+function initForecastCharts() {
+  const total = arr => (arr||[]).reduce((a,b)=>a+b,0);
+  const fmtMi = v => (v<0?'-':'')+'R$ '+Math.abs(v).toFixed(1)+' Mi';
+  const varPct = (real,budget) => budget ? ((real-budget)/Math.abs(budget)*100) : 0;
+
+  const recBud = total(DATA.receita_budget), recFor = total(DATA.receita_forecast), recReal = total(DATA.receita_real);
+  const cusBud = total(DATA.custos_budget), cusFor = total(DATA.custos_forecast), cusReal = total(DATA.custos_real);
+  const ebtBud = total(DATA.ebitda_budget), ebtFor = total(DATA.ebitda_forecast), ebtReal = total(DATA.ebitda_real);
+  const llBud  = total(DATA.lucro_liquido_budget), llFor = total(DATA.lucro_liquido_forecast), llReal = total(DATA.lucro_liquido_real);
+  const margemAtual = DATA.margem_ebitda.length ? DATA.margem_ebitda[DATA.margem_ebitda.length-1] : 0;
+  const saldoCaixaAtual = DATA.caixa.length ? DATA.caixa[DATA.caixa.length-1] : 0;
+
+  // ── KPIs CONSOLIDADOS ──
+  const kpiRow = document.getElementById('forecast-kpi-row');
+  if(kpiRow) kpiRow.innerHTML = [
+    { label:'RECEITA (REAL)',          val:fmtMi(recReal), icon:'💰', bg:'#EAF5FF', varv:varPct(recReal,recBud) },
+    { label:'CUSTOS/DESPESAS (REAL)',  val:fmtMi(cusReal), icon:'📉', bg:'#FDF5E6', varv:varPct(cusReal,cusBud), invert:true },
+    { label:'EBITDA (REAL)',           val:fmtMi(ebtReal), icon:'📈', bg:'#EAFAF1', varv:varPct(ebtReal,ebtBud) },
+    { label:'MARGEM EBITDA',           val:margemAtual.toFixed(1)+'%', icon:'%', bg:'#FDF5E6' },
+    { label:'LUCRO LÍQUIDO (REAL)',    val:fmtMi(llReal), icon:'🏆', bg:'#F9EBEA', varv:varPct(llReal,llBud) },
+    { label:'SALDO DE CAIXA',          val:fmtMi(saldoCaixaAtual), icon:'💳', bg:'#EAFAF1' },
+  ].map(k=>`
+    <div class="kpi-card">
+      <div style="flex:1">
+        <div class="kpi-label">${k.label}</div>
+        <div class="kpi-value" style="font-size:17px">${k.val}</div>
+        ${k.varv!==undefined ? `<div style="font-size:11px;font-weight:600;margin-top:2px;color:${(k.invert ? k.varv<=0 : k.varv>=0)?'var(--green)':'var(--red)'}">${k.varv>=0?'+':''}${k.varv.toFixed(1)}% vs Budget</div>` : '<div style="font-size:11px;color:var(--muted);margin-top:2px">&nbsp;</div>'}
+      </div>
+    </div>`).join('');
+
+  // ── RECEITA: BUDGET x FORECAST x REAL ──
+  destroyChart('chart-forecast-rec');
+  const c1 = document.getElementById('chart-forecast-rec');
+  if(c1) {
+    charts['chart-forecast-rec'] = new Chart(c1,{
+      type:'line',
+      data:{ labels:MESES_SHORT,
+        datasets:[
+          { label:'Budget',   data:DATA.receita_budget,   borderColor:'#94A3B8', borderDash:[5,3], borderWidth:2, tension:.3, pointRadius:2 },
+          { label:'Forecast', data:DATA.receita_forecast, borderColor:'#F39C12', borderWidth:2.5, tension:.3, pointRadius:3 },
+          { label:'Real',     data:DATA.receita_real,     borderColor:'#1B2A4A', borderWidth:2.5, tension:.3, pointRadius:3 },
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{font:{size:11}}}},
+        scales:{ x:{grid:{display:false},ticks:{font:{size:10}}}, y:{grid:{color:'#EEE'},ticks:{callback:v=>v+' Mi',font:{size:10}}} }
+      }
+    });
+  }
+
+  // ── CUSTOS/DESPESAS: BUDGET x FORECAST x REAL ──
+  destroyChart('chart-forecast-custos');
+  const c2 = document.getElementById('chart-forecast-custos');
+  if(c2) {
+    charts['chart-forecast-custos'] = new Chart(c2,{
+      type:'line',
+      data:{ labels:MESES_SHORT,
+        datasets:[
+          { label:'Budget',   data:DATA.custos_budget,   borderColor:'#94A3B8', borderDash:[5,3], borderWidth:2, tension:.3, pointRadius:2 },
+          { label:'Forecast', data:DATA.custos_forecast, borderColor:'#F39C12', borderWidth:2.5, tension:.3, pointRadius:3 },
+          { label:'Real',     data:DATA.custos_real,     borderColor:'#E74C3C', borderWidth:2.5, tension:.3, pointRadius:3 },
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{font:{size:11}}}},
+        scales:{ x:{grid:{display:false},ticks:{font:{size:10}}}, y:{grid:{color:'#EEE'},ticks:{callback:v=>v+' Mi',font:{size:10}}} }
+      }
+    });
+  }
+
+  // ── EBITDA: BUDGET x FORECAST x REAL ──
+  destroyChart('chart-forecast-ebt');
+  const c3 = document.getElementById('chart-forecast-ebt');
+  if(c3) {
+    charts['chart-forecast-ebt'] = new Chart(c3,{
+      type:'bar',
+      data:{ labels:MESES_SHORT,
+        datasets:[
+          { label:'Budget',   data:DATA.ebitda_budget,   backgroundColor:'#94A3B8', borderRadius:4 },
+          { label:'Forecast', data:DATA.ebitda_forecast, backgroundColor:'#F39C12', borderRadius:4 },
+          { label:'Real',     data:DATA.ebitda_real,     backgroundColor:'#1B2A4A', borderRadius:4 },
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{font:{size:11}}}},
+        scales:{ x:{grid:{display:false},ticks:{font:{size:10}}}, y:{grid:{color:'#EEE'},ticks:{callback:v=>v+' Mi',font:{size:10}}} }
+      }
+    });
+  }
+
+  // ── MARGEM EBITDA (%) ──
+  destroyChart('chart-forecast-margem');
+  const c4 = document.getElementById('chart-forecast-margem');
+  if(c4) {
+    charts['chart-forecast-margem'] = new Chart(c4,{
+      type:'line',
+      data:{ labels:MESES_SHORT,
+        datasets:[
+          { label:'Margem EBITDA', data:DATA.margem_ebitda, borderColor:'#2ECC71', borderWidth:2.5, tension:.4, pointRadius:3, fill:true, backgroundColor:'rgba(46,204,113,.1)' },
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{ x:{grid:{display:false},ticks:{font:{size:10}}}, y:{grid:{color:'#EEE'},ticks:{callback:v=>v.toFixed(1)+'%',font:{size:10}}} }
+      }
+    });
+  }
+
+  // ── LUCRO LÍQUIDO: BUDGET x FORECAST x REAL ──
+  destroyChart('chart-forecast-lucro');
+  const c5 = document.getElementById('chart-forecast-lucro');
+  if(c5) {
+    charts['chart-forecast-lucro'] = new Chart(c5,{
+      type:'bar',
+      data:{ labels:MESES_SHORT,
+        datasets:[
+          { label:'Budget',   data:DATA.lucro_liquido_budget,   backgroundColor:'#94A3B8', borderRadius:4 },
+          { label:'Forecast', data:DATA.lucro_liquido_forecast, backgroundColor:'#F39C12', borderRadius:4 },
+          { label:'Real',     data:DATA.lucro_liquido_real,     backgroundColor:'#1B2A4A', borderRadius:4 },
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{font:{size:11}}}},
+        scales:{ x:{grid:{display:false},ticks:{font:{size:10}}}, y:{grid:{color:'#EEE'},ticks:{callback:v=>v+' Mi',font:{size:10}}} }
+      }
+    });
+  }
+
+  // ── FLUXO DE CAIXA PROJETADO + SALDO DE CAIXA ──
+  destroyChart('chart-forecast-caixa');
+  const c6 = document.getElementById('chart-forecast-caixa');
+  if(c6) {
+    charts['chart-forecast-caixa'] = new Chart(c6,{
+      data:{ labels:MESES_SHORT,
+        datasets:[
+          { type:'bar',  label:'Fluxo de Caixa Projetado', data:DATA.fluxo_caixa_forecast, backgroundColor:'#82A0D4', borderRadius:4, order:2 },
+          { type:'line', label:'Saldo de Caixa',           data:DATA.caixa, borderColor:'#2ECC71', borderWidth:2.5, tension:.3, pointRadius:3, order:1 },
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{font:{size:11}}}},
+        scales:{ x:{grid:{display:false},ticks:{font:{size:10}}}, y:{grid:{color:'#EEE'},ticks:{callback:v=>v+' Mi',font:{size:10}}} }
+      }
+    });
+  }
+
+  // ── CENÁRIOS: BASE x CONSERVADOR x OTIMISTA ──
+  destroyChart('chart-forecast-cenarios');
+  const c7 = document.getElementById('chart-forecast-cenarios');
+  const cen = DATA.cenarios || {base:{},conservador:{},otimista:{}};
+  const cenTotal = (c,k) => total(c && c[k]);
+  if(c7) {
+    charts['chart-forecast-cenarios'] = new Chart(c7,{
+      type:'bar',
+      data:{ labels:['Receita','EBITDA','Lucro Líquido'],
+        datasets:[
+          { label:'Conservador', data:[cenTotal(cen.conservador,'receita'),cenTotal(cen.conservador,'ebitda'),cenTotal(cen.conservador,'lucro_liquido')], backgroundColor:'#E74C3C', borderRadius:4 },
+          { label:'Base',        data:[cenTotal(cen.base,'receita'),cenTotal(cen.base,'ebitda'),cenTotal(cen.base,'lucro_liquido')],                       backgroundColor:'#1B2A4A', borderRadius:4 },
+          { label:'Otimista',    data:[cenTotal(cen.otimista,'receita'),cenTotal(cen.otimista,'ebitda'),cenTotal(cen.otimista,'lucro_liquido')],           backgroundColor:'#2ECC71', borderRadius:4 },
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{font:{size:11}}}},
+        scales:{ x:{grid:{display:false},ticks:{font:{size:10}}}, y:{grid:{color:'#EEE'},ticks:{callback:v=>v+' Mi',font:{size:10}}} }
+      }
+    });
+  }
+
+  // ── TABELA CONSOLIDADA ──
+  const t = document.getElementById('tbl-forecast');
+  if(t){
+    const linhas = [
+      { nome:'Receita',         b:recBud, f:recFor, r:recReal, invert:false },
+      { nome:'Custos/Despesas', b:cusBud, f:cusFor, r:cusReal, invert:true  },
+      { nome:'EBITDA',          b:ebtBud, f:ebtFor, r:ebtReal, invert:false },
+      { nome:'Lucro Líquido',   b:llBud,  f:llFor,  r:llReal,  invert:false },
+    ];
+    t.innerHTML = `<thead><tr><th>Métrica</th><th>Budget (Ano)</th><th>Forecast (Ano)</th><th>Real (Ano)</th><th>Var. R$ (Real - Budget)</th><th>Var. %</th></tr></thead>
+    <tbody>${linhas.map(l=>{
+      const varRs = l.r - l.b;
+      const varP  = l.b ? (varRs/Math.abs(l.b)*100) : 0;
+      const bom = l.invert ? varRs<=0 : varRs>=0;
+      const cls = bom ? 'pos-cell' : 'neg-cell';
+      return `<tr><td>${l.nome}</td><td>${l.b.toFixed(1)}</td><td>${l.f.toFixed(1)}</td><td>${l.r.toFixed(1)}</td>
+        <td class="${cls}">${varRs>=0?'+':''}${varRs.toFixed(1)}</td>
+        <td class="${cls}">${varP>=0?'+':''}${varP.toFixed(1)}%</td></tr>`;
+    }).join('')}
+    <tr><td>Margem EBITDA</td><td colspan="5" style="text-align:left;color:var(--muted)">${margemAtual.toFixed(1)}% no último mês — evolução completa no gráfico acima</td></tr>
+    </tbody>`;
+  }
+
+  // ── TABELA DE CENÁRIOS ──
+  const t2 = document.getElementById('tbl-forecast-cenarios');
+  if(t2){
+    const metrs = [ {nome:'Receita',key:'receita'}, {nome:'EBITDA',key:'ebitda'}, {nome:'Lucro Líquido',key:'lucro_liquido'} ];
+    t2.innerHTML = `<thead><tr><th>Métrica (Total Ano)</th><th>Conservador</th><th>Base</th><th>Otimista</th></tr></thead>
+    <tbody>${metrs.map(m=>`<tr><td>${m.nome}</td><td>${cenTotal(cen.conservador,m.key).toFixed(1)}</td><td>${cenTotal(cen.base,m.key).toFixed(1)}</td><td>${cenTotal(cen.otimista,m.key).toFixed(1)}</td></tr>`).join('')}</tbody>`;
+  }
+}
+
+// ── DETALHE PAGE ──
+
+// ── BALANÇO PATRIMONIAL ──
+
+function bpSum(group, idx) {
+  return Object.values(group).reduce((s,v)=>s+(v[idx]||0),0);
+}
+
+function initBalancoCharts() {
+
+  // ── Data model: single YTD snapshot ───────────────────
+  const BP = DATA.balanco;
+
+  const sumGroup = g => Object.values(g).reduce((s,v)=>s+v.val,0);
+
+  const tac  = sumGroup(BP.ativo_circ);
+  const tanc = sumGroup(BP.ativo_nc);
+  const tpc  = sumGroup(BP.pass_circ);
+  const tpnc = sumGroup(BP.pass_nc);
+  const tpl  = sumGroup(BP.pl);
+  const ta   = tac + tanc;
+  const tppl = tpc + tpnc + tpl;
+  const cxa  = BP.ativo_circ['Caixa e Equivalentes'].val;
+  const est  = BP.ativo_circ['Estoques'].val;
+  const ecp  = BP.pass_circ['Empréstimos CP'].val;
+  const elp  = BP.pass_nc['Empréstimos LP'].val;
+  const deb  = BP.pass_nc['Debêntures'].val;
+
+  const fmt1 = v => (v<0?'('+Math.abs(v).toFixed(1)+')':v.toFixed(1));
+  const fmtD = v => (v>0?'+':'')+v.toFixed(1);
+  const fmtPct = v => (v*100).toFixed(1)+'%';
+
+  // ── KPI cards ─────────────────────────────────────────
+  const kpis = [
+    { label:'TOTAL DO ATIVO',      val:'R$ '+ta.toFixed(1)+' Mi',   icon:'📦', bg:'#EAF0FF',
+      sub: 'Circ: R$'+tac.toFixed(1)+' Mi  |  NC: R$'+tanc.toFixed(1)+' Mi' },
+    { label:'LIQUIDEZ CORRENTE',   val:(tac/tpc).toFixed(2)+'x',    icon:'💧', bg:'#E8F8F0',
+      sub: (tac/tpc)>=1 ? 'Ativo Circ. cobre Passivo Circ.' : 'Abaixo de 1,0x' },
+    { label:'ENDIVIDAMENTO',       val:((1-tpl/ta)*100).toFixed(1)+'%', icon:'⚖️', bg:'#FDF5E6',
+      sub: 'PL: R$'+tpl.toFixed(1)+' Mi  |  Dívida Total: R$'+(tpc+tpnc).toFixed(1)+' Mi' },
+    { label:'DÍVIDA LÍQ. / EBITDA',val:((ecp+elp+deb-cxa)/BP.ebitda).toFixed(2)+'x', icon:'📊', bg:'#F9EBEA',
+      sub: 'Dívida Bruta: R$'+(ecp+elp+deb).toFixed(1)+' Mi  |  Caixa: R$'+cxa.toFixed(1)+' Mi' },
+  ];
+  document.getElementById('bp-kpi-row').innerHTML = kpis.map(k=>`
+    <div class="kpi-card">
+      <div style="flex:1">
+        <div class="kpi-label">${k.label}</div>
+        <div class="kpi-value" style="font-size:20px;margin-bottom:4px">${k.val}</div>
+        <div style="font-size:10px;color:var(--muted)">${k.sub}</div>
+      </div>
+    </div>`).join('');
+
+  // ── Balanço check bar ──────────────────────────────────
+  const diff = Math.abs(ta - tppl);
+  const checkBar = document.getElementById('bp-check-bar');
+  if(checkBar) {
+    const ok = diff < 0.1;
+    checkBar.style.background = ok ? '#E8F8F0' : '#FDEDEC';
+    checkBar.style.border     = ok ? '1px solid #2ECC71' : '1px solid #E74C3C';
+    checkBar.style.color      = ok ? '#1A6B3C' : '#922B21';
+    checkBar.innerHTML = ok
+      ? `<b>Balanço confere:</b>  Total do Ativo = Total Passivo + PL = R$ ${ta.toFixed(1)} Mi`
+      : `<b>Balanço não fecha!</b>  Ativo: R$ ${ta.toFixed(1)} Mi  |  Passivo+PL: R$ ${tppl.toFixed(1)} Mi  |  Diferença: R$ ${diff.toFixed(1)} Mi`;
+  }
+
+  // ── Build table helper ─────────────────────────────────
+  function buildBPTable(tableId, sections, grandTotal, grandLabel) {
+    const t = document.getElementById(tableId);
+    if(!t) return;
+    let html = `<thead><tr>
+      <th style="text-align:left;width:46%">Conta</th>
+      <th style="width:12%">Cód.</th>
+      <th style="width:18%">YTD (R$ Mi)</th>
+      <th style="width:14%">Δ Budget</th>
+      <th style="width:10%">% Total</th>
+    </tr></thead><tbody>`;
+
+    sections.forEach(({label, group, isGroup}) => {
+      // section header
+      html += `<tr style="background:#243A5E">
+        <td colspan="5" style="color:#fff;font-weight:700;font-size:11px;
+          text-align:left;padding:7px 10px;letter-spacing:.4px">${label}</td></tr>`;
+      if(!isGroup) return;
+
+      Object.entries(group).forEach(([name, d]) => {
+        const delta = d.val - d.bud;
+        const pct   = grandTotal ? (d.val/grandTotal*100).toFixed(1)+'%' : '—';
+        const dCls  = delta >= 0 ? 'color:var(--green)' : 'color:var(--red)';
+        html += `<tr>
+          <td style="padding-left:20px">${name}</td>
+          <td style="color:var(--muted);font-size:10px">${d.cod}</td>
+          <td style="font-weight:600">${fmt1(d.val)}</td>
+          <td style="${dCls};font-weight:600">${fmtD(delta)}</td>
+          <td style="color:var(--muted)">${pct}</td>
+        </tr>`;
+      });
+
+      // sub-total
+      const subTot = sumGroup(group);
+      const subBud = Object.values(group).reduce((s,v)=>s+v.bud,0);
+      const subDelta = subTot - subBud;
+      const subDCls = subDelta>=0?'color:var(--green)':'color:var(--red)';
+      const subPct  = grandTotal?(subTot/grandTotal*100).toFixed(1)+'%':'—';
+      html += `<tr style="background:#EAF0FB">
+        <td style="font-weight:700;color:#1B2A4A;padding-left:10px">TOTAL ${label}</td>
+        <td></td>
+        <td style="font-weight:700;color:#1B2A4A">${subTot.toFixed(1)}</td>
+        <td style="${subDCls};font-weight:700">${fmtD(subDelta)}</td>
+        <td style="color:var(--muted)">${subPct}</td>
+      </tr>`;
+    });
+
+    // Grand total row
+    if(grandLabel) {
+      const gt = grandTotal;
+      const gtBud = sections.filter(s=>s.isGroup)
+        .reduce((s,sec)=>s+Object.values(sec.group).reduce((ss,v)=>ss+v.bud,0),0);
+      const gtD = gt - gtBud;
+      const gtDCls = gtD>=0?'color:#fff':'color:#FADBD8';
+      html += `<tr style="background:#1B2A4A">
+        <td style="color:#fff;font-weight:700">${grandLabel}</td>
+        <td></td>
+        <td style="color:#fff;font-weight:700">${gt.toFixed(1)}</td>
+        <td style="${gtDCls};font-weight:700">${fmtD(gtD)}</td>
+        <td style="color:rgba(255,255,255,.6)">100%</td>
+      </tr>`;
+    }
+
+    html += '</tbody>';
+    t.innerHTML = html;
+  }
+
+  buildBPTable('tbl-ativo', [
+    { label:'ATIVO CIRCULANTE',     group: BP.ativo_circ, isGroup: true },
+    { label:'ATIVO NÃO CIRCULANTE', group: BP.ativo_nc,   isGroup: true },
+  ], ta, 'TOTAL DO ATIVO');
+
+  buildBPTable('tbl-passivo', [
+    { label:'PASSIVO CIRCULANTE',     group: BP.pass_circ, isGroup: true },
+    { label:'PASSIVO NÃO CIRCULANTE', group: BP.pass_nc,   isGroup: true },
+    { label:'PATRIMÔNIO LÍQUIDO',     group: BP.pl,        isGroup: true },
+  ], tppl, 'TOTAL PASSIVO + PL');
+
+  // ── Indicadores table ──────────────────────────────────
+  const lc   = tac/tpc;
+  const ls   = (tac-est)/tpc;
+  const li   = cxa/tpc;
+  const end  = (1-tpl/ta)*100;
+  const dlev = (ecp+elp+deb-cxa)/BP.ebitda;
+  const roe  = BP.lucro_liq/tpl*100;
+  const roa  = BP.lucro_liq/ta*100;
+  const giro = BP.receita/ta;
+
+  const indDefs = [
+    { name:'Liquidez Corrente',    val:lc,   fmt:v=>v.toFixed(2)+'x', ref:'>1,0x', ok:lc>=1   },
+    { name:'Liquidez Seca',        val:ls,   fmt:v=>v.toFixed(2)+'x', ref:'>0,8x', ok:ls>=0.8 },
+    { name:'Liquidez Imediata',    val:li,   fmt:v=>v.toFixed(2)+'x', ref:'>0,3x', ok:li>=0.3 },
+    { name:'Endividamento',        val:end,  fmt:v=>v.toFixed(1)+'%', ref:'<60%',  ok:end<=60 },
+    { name:'Dívida Líq./EBITDA',   val:dlev, fmt:v=>v.toFixed(2)+'x', ref:'<3,0x', ok:dlev<=3 },
+    { name:'ROE',                  val:roe,  fmt:v=>v.toFixed(1)+'%', ref:'>10%',  ok:roe>=10 },
+    { name:'ROA',                  val:roa,  fmt:v=>v.toFixed(1)+'%', ref:'>5%',   ok:roa>=5  },
+    { name:'Giro do Ativo',        val:giro, fmt:v=>v.toFixed(2)+'x', ref:'>0,5x', ok:giro>=0.5},
+  ];
+
+  const tInd = document.getElementById('tbl-ind-bp');
+  if(tInd) tInd.innerHTML = `
+    <thead><tr>
+      <th style="text-align:left">Indicador</th>
+      <th>Valor YTD</th>
+      <th>Referência</th>
+      <th>Status</th>
+    </tr></thead>
+    <tbody>${indDefs.map((d,i)=>`
+      <tr style="${i%2===0?'':'background:#F8FAFF'}">
+        <td style="font-weight:600">${d.name}</td>
+        <td style="font-weight:700;color:${d.ok?'var(--green)':'var(--red)'}">${d.fmt(d.val)}</td>
+        <td style="color:var(--muted);font-size:11px">${d.ref}</td>
+        <td style="font-size:11px;font-weight:700;color:${d.ok?'var(--green)':'var(--red)'}">${d.ok?'Adequado':'Atenção'}</td>
+      </tr>`).join('')}
+    </tbody>`;
+
+  // ── Donut: Ativo ───────────────────────────────────────
+  destroyChart('chart-ativo-donut');
+  const cad = document.getElementById('chart-ativo-donut');
+  if(cad) {
+    const adLabels = ['Ativo Circ.','Ativo NC'];
+    const adColors = ['#1B2A4A','#3498DB'];
+    charts['chart-ativo-donut'] = new Chart(cad,{
+      type:'doughnut',
+      data:{ labels:adLabels,
+        datasets:[{data:[tac,tanc], backgroundColor:adColors, borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+        plugins:{legend:{display:false}}}
+    });
+    const el = document.getElementById('ativo-donut-val');
+    if(el) el.textContent = 'R$ '+ta.toFixed(1)+' Mi';
+    const legAd = document.getElementById('legend-ativo-donut');
+    if(legAd) legAd.innerHTML = adLabels.map((l,i)=>
+      `<div class="legend-item"><div class="legend-dot" style="background:${adColors[i]}"></div> ${l}</div>`).join('');
+  }
+
+  // ── Donut: Passivo+PL ──────────────────────────────────
+  destroyChart('chart-passivo-donut');
+  const cpd = document.getElementById('chart-passivo-donut');
+  if(cpd) {
+    const pdLabels = ['Pass. Circ.','Pass. NC','Patrimônio Líquido'];
+    const pdColors = ['#E74C3C','#F39C12','#2ECC71'];
+    charts['chart-passivo-donut'] = new Chart(cpd,{
+      type:'doughnut',
+      data:{ labels:pdLabels,
+        datasets:[{data:[tpc,tpnc,tpl], backgroundColor:pdColors, borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+        plugins:{legend:{display:false}}}
+    });
+    const el = document.getElementById('passivo-donut-val');
+    if(el) el.textContent = 'R$ '+tppl.toFixed(1)+' Mi';
+    const legPd = document.getElementById('legend-passivo-donut');
+    if(legPd) legPd.innerHTML = pdLabels.map((l,i)=>
+      `<div class="legend-item"><div class="legend-dot" style="background:${pdColors[i]}"></div> ${l}</div>`).join('');
+  }
+
+  // ── Chart: Liquidez vs referência ─────────────────────
+  destroyChart('chart-liquidez');
+  const cl2 = document.getElementById('chart-liquidez');
+  if(cl2) charts['chart-liquidez'] = new Chart(cl2,{
+    type:'bar',
+    data:{
+      labels:['Liq. Corrente','Liq. Seca','Liq. Imediata','Dív.Líq/EBITDA'],
+      datasets:[
+        { label:'YTD',       data:[lc,ls,li,dlev], backgroundColor:['#1B2A4A','#1B2A4A','#1B2A4A','#E74C3C'], borderRadius:6 },
+        { label:'Referência',data:[1.0,0.8,0.3,3.0], backgroundColor:'rgba(46,204,113,.25)', borderRadius:6,
+          borderColor:'#2ECC71', borderWidth:1.5 },
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{font:{size:10}}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:10}}},
+              y:{grid:{color:'#EEE'},ticks:{font:{size:10},callback:v=>v.toFixed(1)+'x'}}}
+    }
+  });
+
+  // ── Chart: Estrutura de Capital ────────────────────────
+  destroyChart('chart-alavancagem');
+  const ca = document.getElementById('chart-alavancagem');
+  if(ca) charts['chart-alavancagem'] = new Chart(ca,{
+    type:'bar',
+    data:{
+      labels:['Pass. Circ.','Pass. NC','Patr. Líquido'],
+      datasets:[
+        { label:'YTD (R$ Mi)',    data:[tpc,tpnc,tpl],    backgroundColor:['#E74C3C','#F39C12','#2ECC71'], borderRadius:6 },
+        { label:'Budget (R$ Mi)', data:[30.4,59.0,70.5],  backgroundColor:['rgba(231,76,60,.25)','rgba(243,156,18,.25)','rgba(46,204,113,.25)'],
+          borderColor:['#E74C3C','#F39C12','#2ECC71'], borderWidth:1.5, borderRadius:6 },
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{font:{size:10}}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:10}}},
+              y:{grid:{color:'#EEE'},ticks:{callback:v=>'R$'+v+' Mi',font:{size:10}}}}
+    }
+  });
+
+  // ── Chart: ROE vs ROA ─────────────────────────────────
+  destroyChart('chart-rent');
+  const cr = document.getElementById('chart-rent');
+  if(cr) charts['chart-rent'] = new Chart(cr,{
+    type:'bar',
+    data:{
+      labels:['ROE (%)','ROA (%)'],
+      datasets:[
+        { label:'YTD',       data:[roe,roa],  backgroundColor:['#1B2A4A','#2ECC71'], borderRadius:6, barPercentage:0.4 },
+        { label:'Referência',data:[10,5],     backgroundColor:['rgba(27,42,74,.2)','rgba(46,204,113,.2)'],
+          borderColor:['#1B2A4A','#2ECC71'], borderWidth:1.5, borderRadius:6, barPercentage:0.4 },
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{font:{size:10}}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:10}}},
+              y:{grid:{color:'#EEE'},ticks:{callback:v=>v.toFixed(1)+'%',font:{size:10}}}}
+    }
+  });
+}
+
+function initDetalheCharts() {
+  const t = document.getElementById('tbl-var');
+  if(t){
+    t.innerHTML = `<thead><tr><th>Item</th><th>Tipo</th><th>Variação (R$ Mi)</th><th>Direção</th><th>Comentário</th></tr></thead>
+    <tbody>${DATA.variacoes.map(v=>`
+      <tr>
+        <td>${v.item}</td>
+        <td style="color:${v.tipo==='Positiva'?'var(--green)':'var(--red)'};font-weight:600">${v.tipo}</td>
+        <td class="${v.var>=0?'pos-cell':'neg-cell'}">${v.var>=0?'+':''}${v.var.toFixed(1)}</td>
+        <td style="color:${v.var>=0?'var(--green)':'var(--red)'};font-size:16px">${v.dir}</td>
+        <td style="text-align:left">${v.coment}</td>
+      </tr>`).join('')}</tbody>`;
+  }
+
+  // Waterfall EBITDA bridge
+  destroyChart('chart-waterfall');
+  const cw = document.getElementById('chart-waterfall');
+  if(cw) {
+    const pos = DATA.variacoes.filter(v=>v.var>0);
+    const neg = DATA.variacoes.filter(v=>v.var<0);
+    const labels = ['Budget',...pos.map(v=>v.item.replace('Receita - ','')),...neg.map(v=>v.item.replace('OPEX - ','').replace('COGS - ','')),'Real'];
+    const base = 8.4;
+    const vals = [base,...pos.map(v=>v.var),...neg.map(v=>v.var),0];
+    let cum = base;
+    const bars = vals.map((v,i)=>{
+      if(i===0) return v;
+      if(i===vals.length-1) { return DATA.ebitda_real[4]; }
+      cum += v; return v;
+    });
+    const colors = bars.map((v,i)=> i===0||i===bars.length-1?'#1B2A4A': v>=0?'#2ECC71':'#E74C3C');
+    charts['chart-waterfall'] = new Chart(cw,{
+      type:'bar',
+      data:{ labels, datasets:[{ data:bars, backgroundColor:colors, borderRadius:4 }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{ x:{grid:{display:false},ticks:{font:{size:9},maxRotation:30}}, y:{grid:{color:'#EEE'},ticks:{font:{size:10},callback:v=>v+' Mi'}} }
+      }
+    });
+  }
+
+  destroyChart('chart-pizza-rec');
+  const cp = document.getElementById('chart-pizza-rec');
+  if(cp){
+    const entries = Object.entries(DATA.receita_produtos);
+    const totals = entries.map(([,v])=>v.reduce((a,b)=>a+b,0));
+    charts['chart-pizza-rec'] = new Chart(cp,{
+      type:'pie',
+      data:{ labels:entries.map(([k])=>k), datasets:[{ data:totals, backgroundColor:['#1B2A4A','#2ECC71','#3498DB','#F39C12'], borderWidth:2 }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right',labels:{font:{size:11}}}} }
+    });
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════════
+const PAGE_META = {
+  visao:   { title:'VISÃO GERAL EXECUTIVA',       sub:'Performance financeira consolidada' },
+  receita: { title:'ANÁLISE DE RECEITA',           sub:'Detalhamento por produto, canal e região' },
+  custos:  { title:'CUSTOS & RENTABILIDADE',       sub:'Estrutura de custos e margens' },
+  caixa:   { title:'CAIXA & CAPITAL DE GIRO',      sub:'Liquidez e ciclo de conversão' },
+  forecast:{ title:'PLANEJAMENTO & FORECAST',      sub:'Receita, custos, EBITDA, lucro líquido, caixa e cenários — visão consolidada da empresa' },
+  balanco: { title:'BALANÇO PATRIMONIAL', sub:'Estrutura patrimonial, liquidez e rentabilidade' },
+  detalhe: { title:'DETALHAMENTO',                 sub:'Análise de variações vs Budget' },
+  config:  { title:'CONFIGURAÇÕES',                sub:'Personalização do dashboard por cliente' },
+};
+
+function navigate(el, page) {
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  const m = PAGE_META[page];
+  document.getElementById('page-title').textContent = m.title;
+  document.getElementById('page-sub').textContent   = m.sub;
+
+  // Init charts per page
+  setTimeout(()=>{
+    if(page==='visao')   initVisaoCharts();
+    if(page==='receita') initReceitaCharts();
+    if(page==='custos')  initCustosCharts();
+    if(page==='caixa')   initCaixaCharts();
+    if(page==='forecast')initForecastCharts();
+    if(page==='balanco') initBalancoCharts();
+    if(page==='detalhe') initDetalheCharts();
+  }, 50);
+}
+
+// ══════════════════════════════════════════════════════════
+// IMPORT / EXPORT / CONFIGURAÇÕES — removidos deste arquivo.
+// Protótipo demonstrativo somente leitura: quem receber este HTML
+// não deve conseguir importar, exportar ou alterar nenhum dado.
+// ══════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════════════
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+// ══════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  const updateTimeEl = document.getElementById('update-time');
+  if(updateTimeEl) {
+    const agora = new Date();
+    updateTimeEl.textContent = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  }
+  applyLogo(LOGO_BASE64);
+  renderKPIs();
+  renderCWC('cwc-row');
+  renderTop5();
+  setTimeout(initVisaoCharts, 100);
+});
+</script>
+</body>
+</html>
